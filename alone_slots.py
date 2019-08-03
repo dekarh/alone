@@ -57,7 +57,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         self.twRez.keyPressEvent = self.twRezkeyPressEvent
         self.clbSave.setEnabled(False)
         self.contracts = {None:None}
-        self.has_report = False
+        self.clbReport2xlsx.setEnabled(False)
         return
 
     def twRezkeyPressEvent(self,e):
@@ -162,7 +162,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
             return
 
     def click_clbSave(self):
-        self.has_report = False
+        self.clbReport2xlsx.setEnabled(False)
         dbconn = MySQLConnection(**self.dbconfig_alone)
         cursor = dbconn.cursor()
         sql = 'SELECT * FROM alone_connect WHERE path = %s AND file = %s AND client_id = %s'
@@ -277,16 +277,20 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
     def click_clbRefreshReport(self):
         dbconn = MySQLConnection(**self.dbconfig_alone)
         cursor = dbconn.cursor()
-        cursor.execute('SELECT client_id, path, file FROM alone_connect', (self.cbFolder.currentText(),
-                                                                           self.leFile.text(), self.client_id))
+        cursor.execute('SELECT client_id, path, file FROM alone_connect')
         rows = cursor.fetchall()
         temp_ids = []
-        report_client_ids = {} # Файл, папка, id - все повторяется ((((
+        report_client_ids = {} # Даже индекс из папки+файл тоже может повторяться ((( Добавляем номер дубля (i) вначале
         for row in rows:
             temp_ids.append(row[0])
-            report_client_ids['{0:04d}'.format(int(row[1])) + row[2]] = row[0]
-        uniq_client_ids = list(set(temp_ids))
-
+            for i in range (0,9):
+                if report_client_ids.get(str(i) + '{0:04d}'.format(int(row[1])) + row[2], None):
+                    pass
+                else:
+                    report_client_ids[str(i) + '{0:04d}'.format(int(row[1])) + row[2]] = row[0]
+                    break
+        uniq_client_ids = list(set(temp_ids)) # Убираем повторы из массива idшников чтобы
+                                              # запросить внутренности нужных договоров
         dbconn = MySQLConnection(**self.dbconfig_crm)
         cursor = dbconn.cursor()
         sql = 'SELECT cl.p_surname,cl.p_name,cl.p_lastname,cl.p_service_address,cl.d_service_address,' \
@@ -294,7 +298,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
               'LEFT JOIN saturn_crm.contracts AS co ON co.client_id = cl.client_id ' \
               'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
               'WHERE cl.client_id in ({c})'.format(c=', '.join(['%s'] * len(uniq_client_ids)))
-        cursor.execute(sql)
+        cursor.execute(sql, tuple(uniq_client_ids))
         rows = cursor.fetchall()
         dogovors = {}
         for row in rows:
@@ -317,9 +321,23 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                 else:
                     dogovor['Даты'] = [None]
                 dogovors[client_id] = dogovor
+        report = {}
+        for report_client_id in report_client_ids:
+            path = int(report_client_id[1:5])  #file = report_client_id[5:]
+            client_id = report_client_ids[report_client_id]
+            dates = dogovors[client_id]['Даты']
+            if report.get(path, None):
+                if report[path].get(client_id, None):
+                    for data in report[path][client_id]:
+                        if data not in dates:
+                            dates = dates + [data]
+                    report[path][client_id] = dates
+                else:
+                    report[path][client_id] = dates
+            else:
+                report[path] = {client_id: dates}
 
-
-        self.has_report = True
+        self.clbReport2xlsx.setEnabled(True)
 
     def click_clbReport2xlsx(self):
         wb_log = openpyxl.Workbook(write_only=True)
