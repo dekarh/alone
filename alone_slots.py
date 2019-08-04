@@ -294,7 +294,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         dbconn = MySQLConnection(**self.dbconfig_crm)
         cursor = dbconn.cursor()
         sql = 'SELECT cl.p_surname,cl.p_name,cl.p_lastname,cl.p_service_address,cl.d_service_address,' \
-              'ca.client_phone,ca.call_comment,ca.inserted_date,cl.client_id FROM saturn_crm.clients AS cl ' \
+              'ca.client_phone,ca.call_comment,ca.inserted_date,cl.client_id,cl.b_date FROM saturn_crm.clients AS cl ' \
               'LEFT JOIN saturn_crm.contracts AS co ON co.client_id = cl.client_id ' \
               'LEFT JOIN saturn_crm.callcenter AS ca ON ca.contract_id = co.id ' \
               'WHERE cl.client_id in ({c})'.format(c=', '.join(['%s'] * len(uniq_client_ids)))
@@ -320,6 +320,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                     dogovor['Даты'] = [row[7].date()]
                 else:
                     dogovor['Даты'] = [None]
+                dogovor['ДеньРождения'] = row[8]
                 dogovors[client_id] = dogovor
         report = {}
         for report_client_id in report_client_ids:
@@ -327,15 +328,30 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
             client_id = report_client_ids[report_client_id]
             dates = dogovors[client_id]['Даты']
             if report.get(path, None):
+                # есть такая папка
                 if report[path].get(client_id, None):
+                    # есть такая папка и такой client_id
                     for data in report[path][client_id]:
                         if data not in dates:
                             dates = dates + [data]
                     report[path][client_id] = dates
                 else:
-                    report[path][client_id] = dates
+                    # есть такая папка и нет такого client_id !!! первая дата - д/р
+                    report[path][client_id] = [dogovors[client_id]['ДеньРождения']] + dates
             else:
-                report[path] = {client_id: dates}
+                # нет такой папки !!! первая дата - д/р
+                report[path] = {client_id: [dogovors[client_id]['ДеньРождения']] + dates}
+        # анализируем отчет
+        for path in report:
+            for client_id in report[path]:
+                birthday = report[path][client_id][0]
+                dates = {}
+                for i, data in report[path][client_id]:
+                    if i:
+                        if dates.get(data, None):
+                            # есть такая дата
+                            if data not in
+
 
         self.clbReport2xlsx.setEnabled(True)
 
