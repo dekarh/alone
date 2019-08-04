@@ -365,7 +365,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                     # есть такая папка и нет такого телефона
                     report2phones[path][phone] = report[path][client_id][1:]
         # анализируем отчет
-        report_rez = {}
+        self.report_rez = {}
         for path in report2phones:
             dates = {}
             for phone in report2phones[path]:
@@ -378,19 +378,52 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
             dates_ordered = OrderedDict(sorted(dates.items(), key=lambda t: t[1], reverse=True))
             for data in dates_ordered:
                 if len(report2phones[path]) > 1 and dates_ordered[data] >= len(report2phones[path]):
-                    report_rez[path] = datetime.combine(data,time(0,0,0,0)).strftime('%d.%m.%y')
+                    self.report_rez[path] = datetime.combine(data,time(0,0,0,0)).strftime('%d.%m.%y')
                 elif len(report2phones[path]) > 1:
-                    report_rez[path] = 'Мульти'
+                    self.report_rez[path] = 'МУЛЬТИ'
                 else:
-                    report_rez[path] = 'Начато'
+                    self.report_rez[path] = 'начато'
                 break
-
+        keys = []
+        for i in range(0, 10):
+            keys.append(str(i))
+        hkeys = []
+        for i in range(0, 546):
+            hkeys.append(str(i))
+        self.twRez.setColumnCount(len(keys))  # Устанавливаем кол-во колонок
+        self.twRez.setRowCount(546)  # Кол-во строк из таблицы
+        for j in range(0, 546):
+            for k in range(0, 10):
+                if self.report_rez.get(j * 10 + k, None):
+                    self.twRez.setItem(j, k, QTableWidgetItem(self.report_rez[j * 10 + k]))
+                else:
+                    self.twRez.setItem(j, k, QTableWidgetItem('нетинф'))
+        # Устанавливаем заголовки таблицы
+        self.twRez.setHorizontalHeaderLabels(keys)
+        # Устанавливаем заголовки таблицы
+        self.twRez.setVerticalHeaderLabels(hkeys)
+        # Устанавливаем выравнивание на заголовки
+        self.twRez.horizontalHeaderItem(0).setTextAlignment(Qt.AlignCenter)
+        # делаем ресайз колонок по содержимому
+        self.twRez.resizeColumnsToContents()
         self.clbReport2xlsx.setEnabled(True)
 
     def click_clbReport2xlsx(self):
-#        wb_log = openpyxl.Workbook(write_only=True)
-#        ws_log = wb_log.create_sheet('Лог')
-#        ws_log.append([datetime.now().strftime("%H:%M:%S"), ' Начинаем'])
-#        wb_log.save('1.xlsx')
+        wb_log = openpyxl.Workbook(write_only=True)
+        ws_log = wb_log.create_sheet('Отчет')
+        keys = []
+        for i in range(-1, 10):
+            keys.append(str(i))
+        ws_log.append(keys)
+        xlsx_str = []
+        for i in range(0, 546):
+            xlsx_str.append(str(i))
+            for j in range(0, 10):
+                if self.report_rez.get(i * 10 + j, None):
+                    xlsx_str.append(self.report_rez[i * 10 + j])
+                else:
+                    xlsx_str.append('нетинф')
+            ws_log.append(xlsx_str)
+        wb_log.save('Отчет.xlsx')
         return
 
