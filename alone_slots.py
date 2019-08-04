@@ -47,7 +47,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
             for i, line in enumerate(file_all):
                 if i > 1:
                     if len(line.split('/')) > 2 and line.find('search') == -1:
-                        file_name = line.split('.wav')[0].split('/')[2]
+                        file_name = line.split('.wav')[0].split('/')[2].lower()
                         path_name = line.split('./recup_dir.')[1].split('/')[0].replace('/n','')
                         if self.alone_files.get(file_name, None):
                             self.alone_files[file_name].append(path_name)
@@ -210,13 +210,19 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
 
     def click_pbSortO(self):
         contracts4order = {}
+        contracts4orderNone = {}
         for client_id in self.contracts:
             if self.contracts[client_id]['Даты'] != [None]:
-                contracts4order[client_id] = self.contracts[client_id]['Отчество']
+                if self.contracts[client_id]['Отчество']:
+                    contracts4order[client_id] = self.contracts[client_id]['Отчество']
+                else:
+                    contracts4orderNone[client_id] = self.contracts[client_id]['Отчество']
         keys = ['Фамилия', 'Имя', 'Отчество', 'Регистрация', 'Проживание', 'Телефон', 'Коментарий', 'Даты']
         self.twRez.setColumnCount(len(keys))  # Устанавливаем кол-во колонок
         self.twRez.setRowCount(len(contracts4order))  # Кол-во строк из таблицы
         contracts_ordered = OrderedDict(sorted(contracts4order.items(), key=lambda t: t[1]))
+        for client_id in contracts4orderNone:
+            contracts_ordered[client_id] = contracts4orderNone[client_id]
         self.client_ids = []
         for j, client_id in enumerate(contracts_ordered):
             self.client_ids.append(client_id)
@@ -320,7 +326,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                     dogovor['Даты'] = [row[7].date()]
                 else:
                     dogovor['Даты'] = [None]
-                dogovor['ДеньРождения'] = row[8]
+                dogovor['ДеньРождения'] = row[9]
                 dogovors[client_id] = dogovor
         report = {}
         for report_client_id in report_client_ids:
@@ -336,28 +342,55 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                             dates = dates + [data]
                     report[path][client_id] = dates
                 else:
-                    # есть такая папка и нет такого client_id !!! первая дата - д/р
-                    report[path][client_id] = [dogovors[client_id]['ДеньРождения']] + dates
+                    # есть такая папка и нет такого client_id !!! первая дата - телефон
+                    report[path][client_id] = [dogovors[client_id]['Телефон']] + dates
             else:
-                # нет такой папки !!! первая дата - д/р
-                report[path] = {client_id: [dogovors[client_id]['ДеньРождения']] + dates}
-        # анализируем отчет
+                # нет такой папки !!! первая дата - телефон
+                report[path] = {client_id: [dogovors[client_id]['Телефон']] + dates}
+        # перестраиваем с client_id на телефоны
+        report2phones = {}
         for path in report:
+            report2phones[path] = {}
             for client_id in report[path]:
-                birthday = report[path][client_id][0]
-                dates = {}
-                for i, data in report[path][client_id]:
-                    if i:
-                        if dates.get(data, None):
-                            # есть такая дата
-                            if data not in
-
+                phone = report[path][client_id][0]
+                if report2phones[path].get(phone, None):
+                    dates = report2phones[path][phone]
+                    # есть такая папка и такой телефон
+                    for i, data in enumerate(report[path][client_id]):
+                        if i:
+                            if data not in dates:
+                                dates = dates + [data]
+                    report2phones[path][phone] = dates
+                else:
+                    # есть такая папка и нет такого телефона
+                    report2phones[path][phone] = report[path][client_id][1:]
+        # анализируем отчет
+        report_rez = {}
+        for path in report2phones:
+            dates = {}
+            for phone in report2phones[path]:
+                for data in report2phones[path][phone]:
+                    if dates.get(data, None):
+                        # есть такая дата
+                        dates[data] += 1
+                    else:
+                        dates[data] = 1
+            dates_ordered = OrderedDict(sorted(dates.items(), key=lambda t: t[1], reverse=True))
+            for data in dates_ordered:
+                if len(report2phones[path]) > 1 and dates_ordered[data] >= len(report2phones[path]):
+                    report_rez[path] = datetime.combine(data,time(0,0,0,0)).strftime('%d.%m.%y')
+                elif len(report2phones[path]) > 1:
+                    report_rez[path] = 'Мульти'
+                else:
+                    report_rez[path] = 'Начато'
+                break
 
         self.clbReport2xlsx.setEnabled(True)
 
     def click_clbReport2xlsx(self):
-        wb_log = openpyxl.Workbook(write_only=True)
-        ws_log = wb_log.create_sheet('Лог')
-        ws_log.append([datetime.now().strftime("%H:%M:%S"), ' Начинаем'])
-        wb_log.save('1.xlsx')
+#        wb_log = openpyxl.Workbook(write_only=True)
+#        ws_log = wb_log.create_sheet('Лог')
+#        ws_log.append([datetime.now().strftime("%H:%M:%S"), ' Начинаем'])
+#        wb_log.save('1.xlsx')
+        return
 
