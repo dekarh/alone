@@ -415,8 +415,8 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         for i in range(-1, 10):
             keys.append(str(i))
         ws_log.append(keys)
-        xlsx_str = []
         for i in range(0, 546):
+            xlsx_str = []
             xlsx_str.append(str(i))
             for j in range(0, 10):
                 if self.report_rez.get(i * 10 + j, None):
