@@ -1,37 +1,18 @@
 # -*- coding: utf-8 -*-
 # для поиска по базе адресов нужно стартовать сервисы sphinx и fias
 
-from subprocess import Popen, PIPE
-import os
-import sys
-import re
-import string
-import bz2
-from string import digits
-from random import random
-from dateutil.parser import parse
 from collections import OrderedDict
 
 from datetime import datetime, timedelta, time, date
-#from time import time
-import pytz
-utc=pytz.UTC
-
 import openpyxl
-from openpyxl import Workbook
-import requests, json
 
-
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QDate, QDateTime, QSize, Qt, QByteArray, QTimer, QUrl, QThread
-from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtWidgets import QTableWidgetItem, QMessageBox, QMainWindow, QWidget, QFrame, QFileDialog, QComboBox
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from mysql.connector import MySQLConnection
 
 from alone_win import Ui_Form
 
-# import NormalizeFields as norm
 from lib import read_config, l, s, fine_phone, format_phone
 
 class MainWindowSlots(Ui_Form):   # Определяем функции, которые будем вызывать в слотах

@@ -3,10 +3,8 @@ __author__ = 'Denis'
 
 import sys
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QComboBox)
+from PyQt5.QtWidgets import (QApplication, QWidget)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QDate
 
 from alone_slots import MainWindowSlots
 
