@@ -265,6 +265,41 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
     def click_clbRefreshReport(self):
         dbconn = MySQLConnection(**self.dbconfig_alone)
         cursor = dbconn.cursor()
+        cursor.execute('SELECT r.`path`, c.inserted_date FROM lekarh.alone_remont AS r '
+                       'LEFT JOIN saturn_crm.callcenter AS c ON r.callcenter_id = c.id ORDER BY r.`path`')
+        rows = cursor.fetchall()
+        path = rows[0][0]
+        paths = [rows[0][0]]
+        call_dates = [rows[0][1]]
+        for i, row in rows:
+            monodate = ''
+            if i:
+                if row[0] == path:
+                    paths.append(row[0])
+                    if row[1] not in call_dates:
+                        call_dates.append(row[1])
+                else:
+                    if len(paths) == 0:
+                        monodate = ''
+                    elif len(paths) == 1:
+                        monodate = 'начато'
+                    elif len(call_dates) == 1:
+                        monodate = call_dates[0].strftime('%d.%m.%y')
+                    elif len(call_dates) == 2:
+                        if abs(call_dates[0] - call_dates[1]) < timedelta(days=2):
+                            monodate = call_dates[0].strftime('%d-') + call_dates[1].strftime('%d.%m.%y')
+                        else:
+                            monodate = 'МУЛЬТИ'
+                    else:
+                        monodate = 'МУЛЬТИ'
+                    call_dates = [row[1]]
+                    path = row[0]
+                    paths = [row[0]]
+
+
+    def click_clbRefreshReportOld(self):
+        dbconn = MySQLConnection(**self.dbconfig_alone)
+        cursor = dbconn.cursor()
         cursor.execute('SELECT client_id, path, file FROM alone_connect')
         rows = cursor.fetchall()
         #rows = [('39f07f6d-16e7-11e8-86b5-5254004b76e6', '1', 'f658161664'), ('8113962c-16b8-11e8-86b5-5254004b76e6', '2', 'f659636224'), ('42610b96-16ea-11e8-86b5-5254004b76e6', '2', 'f659652608'), ('f51b5fd6-178d-11e8-86b5-5254004b76e6', '2', 'f687063040'), ('8c95a423-bbc5-11e6-b8cb-20cf300dec24', '6', 'f1083621376'), ('820c39ab-178f-11e8-86b5-5254004b76e6', '6', 'f1083621376'), ('3c0652e8-1809-11e8-81ec-5254004b76e6', '7', 'f2880913408'), ('d2d14811-18a0-11e8-81ec-5254004b76e6', '8', 'f3592290304'), ('b77d6b73-04ae-11e7-9f62-5254004b76e6', '9', 'f3592732672'), ('d30b3605-180c-11e8-81ec-5254004b76e6', '9', 'f3592732672'), ('525e4b86-d737-11e6-aa92-20cf300dec24', '9', 'f3712696320'), ('d8fa8330-178f-11e8-86b5-5254004b76e6', '9', 'f3712696320'), ('d3950684-fd16-11e8-8408-000c290cfc84', '25', 'f3909402624'), ('2c80db53-fddc-11e8-8408-000c290cfc84', '25', 'f3899719680'), ('c3b71aed-1da7-11e7-8786-5254004b76e6', '150', 'f2267316224'), ('f2c3a29d-156f-11e8-9039-5254004b76e6', '150', 'f2267807744'), ('d758b226-1808-11e8-81ec-5254004b76e6', '150', 'f2267807744'), ('3830045c-047b-11e9-a9ee-000c290cfc84', '150', 'f2267807744'), ('e4eba1e7-9010-11e7-8989-5254004b76e6', '3', 'f920420352'), ('f8262d02-ec50-11e7-897e-5254004b76e6', '3', 'f920420352')]
