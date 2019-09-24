@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1269</width>
-    <height>228</height>
+    <height>258</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_6">
    <item>
-    <widget class="QFrame" name="frame_8">
+    <widget class="QFrame" name="frmMenu">
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
@@ -170,10 +170,10 @@
        </spacer>
       </item>
       <item>
-       <widget class="QComboBox" name="cbFolder"/>
+       <widget class="QLineEdit" name="leFile"/>
       </item>
       <item>
-       <widget class="QLineEdit" name="leFile"/>
+       <widget class="QComboBox" name="cbFolder"/>
       </item>
       <item>
        <widget class="QCommandLinkButton" name="clbSave">
@@ -206,6 +206,80 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="frmSNILS">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="lbSNILS">
+        <property name="maximumSize">
+         <size>
+          <width>360</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>СНИЛС для поиска даты звонка в НПФ Социум:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="leSNILS">
+        <property name="maximumSize">
+         <size>
+          <width>130</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCommandLinkButton" name="clbSNILS">
+        <property name="maximumSize">
+         <size>
+          <width>33</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>right.png</normaloff>right.png</iconset>
+        </property>
+        <property name="description">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lbDateTime">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

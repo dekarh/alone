@@ -41,6 +41,36 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         self.clbReport2xlsx.setEnabled(False)
         return
 
+    def click_clbSNILS(self):
+        self.lbDateTime.setText('')
+        if l(self.leSNILS.text()) < 10000 or l(self.leSNILS.text()) > 99999999999:
+            self.lbDateTime.setText('')
+        else:
+            dbconn = MySQLConnection(**self.dbconfig_crm)
+            cursor = dbconn.cursor()
+            sql = 'SELECT cl.client_id, ca.client_phone, ca.inserted_date, ca.exchangeable ' \
+                  'FROM saturn_crm.callcenter AS ca ' \
+                  'LEFT JOIN saturn_crm.contracts AS co ON ca.contract_id = co.id ' \
+                  'LEFT JOIN saturn_crm.clients AS cl ON co.client_id = cl.client_id ' \
+                  'WHERE cl.number = %s and cl.subdomain_id = 6'
+            cursor.execute(sql, (l(self.leSNILS.text()),))
+            rows = cursor.fetchall()
+            if len(rows):
+                data = datetime(2001,1,1,0,0)
+                has_checked = False
+                for row in rows:
+                    if row[2] > data:
+                        data = row[2]
+                    if row[3]:
+                        has_checked = True
+                        checked_row = row
+                if has_checked:
+                    data = checked_row[2]
+                self.lbDateTime.setText(data.strftime('%H:%M:%S %d.%m.%Y'))
+            else:
+                self.lbDateTime.setText('Нет такого СНИЛС в БД')
+            return
+
     def twRezkeyPressEvent(self,e):
         self.twRezkeyPressEventMain(e)
         if e.key() == Qt.Key_Down or e.key() == Qt.Key_Up:
@@ -263,6 +293,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         self.twRez.horizontalHeader().resizeSection(7, 100)
 
     def click_clbRefreshReport(self):
+        q1 = """
         # Заполняем информацию по прослушиванию оператором
         dbconn = MySQLConnection(**self.dbconfig_alone)
         cursor = dbconn.cursor()
@@ -369,24 +400,28 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                 else:
                     self.report_rez[path] = 'начато'
                 break
-
+        """
         # Добавляем/заменяем информацию по распознанным файлам
+        dbconn = MySQLConnection(**self.dbconfig_crm)
         cursor = dbconn.cursor()
+        # Распознанные файлы, отсортированные по директориям
         cursor.execute('SELECT r.`path`, c.inserted_date FROM lekarh.alone_remont AS r '
                        'LEFT JOIN saturn_crm.callcenter AS c ON r.callcenter_id = c.id ORDER BY r.`path`')
         rows = cursor.fetchall()
         path = int(rows[0][0])
         count = 1
         call_dates = [rows[0][1].date()]
-        #self.report_rez = {}
+        self.report_rez = {}
         for i, row in enumerate(rows):
             monodate = ''
             if i:
                 if int(row[0]) == path:
+                    # Папка не поменялась
                     count += 1
                     if row[1].date() not in call_dates:
                         call_dates.append(row[1].date())
                 else:
+                    # Следующая папка
                     if count == 0:
                         monodate = ''
                     elif count == 1:
@@ -422,6 +457,53 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         else:
             monodate = 'МУЛЬТИ'
         self.report_rez[path] = monodate
+        # Строим нити
+        dbconn = MySQLConnection(**self.dbconfig_crm)
+        cursor = dbconn.cursor()
+        # Распознанные файлы, отсортированные по дате
+        cursor.execute('SELECT r.`path`, c.inserted_date FROM lekarh.alone_remont AS r '
+                       'LEFT JOIN saturn_crm.callcenter AS c ON r.callcenter_id = c.id ORDER BY c.inserted_date')
+        rows = cursor.fetchall()
+        path = int(rows[0][0])
+        threads = []
+        for i, row in enumerate(rows):
+            if i:
+                if int(row[0]) == path:
+                    # Папка не поменялась
+                    if not len(threads):
+                        threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                    else:
+                        threadUpdated = False
+                        for j, thread in enumerate(threads):
+                            if row[1].date() != thread['end'].date():
+                                # Дата не совпадает?
+                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=11)) < row[1]:
+                                    # Меньше 11 дней? Добавляем в рамках этой нити
+                                    threads[j]['pathsDates'][int(row[0])] = row[1]
+                                    threads[j]['end'] = row[1]
+                            else:
+                                threadUpdated = True
+                        if not threadUpdated:
+                            # Создаем новую нить
+                            threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                else:
+                    # Следующая папка
+                    if not len(threads):
+                        threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                    else:
+                        threadUpdated = False
+                        for j, thread in enumerate(threads):
+                            if row[1].date() != thread['end'].date():
+                                # Дата не совпадает?
+                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=11)) < row[1]:
+                                    # Меньше 11 дней? Добавляем в рамках этой нити
+                                    threads[j]['pathsDates'][int(row[0])] = row[1]
+                                    threads[j]['end'] = row[1]
+                            else:
+                                threadUpdated = True
+                        if not threadUpdated:
+                            # Создаем новую нить
+                            threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
 
         keys = []
         for i in range(0, 10):
