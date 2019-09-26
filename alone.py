@@ -23,6 +23,7 @@ class MainWindow(MainWindowSlots):
         self.clbRefreshReport.clicked.connect(self.click_clbRefreshReport)
         self.clbReport2xlsx.clicked.connect(self.click_clbReport2xlsx)
         self.clbSave.clicked.connect(self.click_clbSave)
+        self.clbLoadXlsx.clicked.connect(self.click_clbLoadXlsx)
         self.clbSNILS.clicked.connect(self.click_clbSNILS)
         self.pbSortF.clicked.connect(self.click_pbSortF)
         self.pbSortIO.clicked.connect(self.click_pbSortIO)

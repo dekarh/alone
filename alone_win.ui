@@ -227,6 +227,26 @@
        <number>0</number>
       </property>
       <item>
+       <widget class="QCommandLinkButton" name="clbLoadXlsx">
+        <property name="maximumSize">
+         <size>
+          <width>33</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>saveXLSX.png</normaloff>saveXLSX.png</iconset>
+        </property>
+        <property name="description">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLabel" name="lbSNILS">
         <property name="maximumSize">
          <size>
