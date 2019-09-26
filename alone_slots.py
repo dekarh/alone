@@ -39,6 +39,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         self.clbSave.setEnabled(False)
         self.contracts = {None:None}
         self.clbReport2xlsx.setEnabled(False)
+        self.threads = []
         return
 
     def click_clbSNILS(self):
@@ -66,7 +67,29 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                         checked_row = row
                 if has_checked:
                     data = checked_row[2]
-                self.lbDateTime.setText(data.strftime('%H:%M:%S %d.%m.%Y'))
+                textDateTime = data.strftime('%d.%m.%Y') + ' прослушать папки'
+                finded = False
+                for thread in self.threads:
+                    if data > thread['start'] and data < thread['end']:
+                        finded = True
+                        max_date_delta = timedelta(days=10000)
+                        min_date_delta = timedelta(days=10000)
+                        for path in thread['pathsDates']:
+                            for call_date in thread['pathsDates'][path]:
+                                if call_date > data and (call_date - data) < max_date_delta:
+                                    max_date_delta = call_date - data
+                                    max_path = path
+                                if call_date < data and (data - call_date) < min_date_delta:
+                                    min_date_delta = data - call_date
+                                    min_path = path
+                        if textDateTime[-16:] == 'прослушать папки':
+                            textDateTime += ' c ' + str(min_path) + ' по ' + str(max_path)
+                        else:
+                            textDateTime += ', c ' + str(min_path) + ' по ' + str(max_path)
+                if not finded:
+                    textDateTime += ' недостаточно информации для определения'
+                self.lbDateTime.setText(textDateTime)
+
             else:
                 self.lbDateTime.setText('Нет такого СНИЛС в БД')
             return
@@ -462,48 +485,70 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         cursor = dbconn.cursor()
         # Распознанные файлы, отсортированные по дате
         cursor.execute('SELECT r.`path`, c.inserted_date FROM lekarh.alone_remont AS r '
-                       'LEFT JOIN saturn_crm.callcenter AS c ON r.callcenter_id = c.id ORDER BY c.inserted_date')
+                       'LEFT JOIN saturn_crm.callcenter AS c ON r.callcenter_id = c.id '
+                       'ORDER BY c.inserted_date, r.`path`')
         rows = cursor.fetchall()
         path = int(rows[0][0])
-        threads = []
+        self.threads = []
         for i, row in enumerate(rows):
             if i:
                 if int(row[0]) == path:
                     # Папка не поменялась
-                    if not len(threads):
-                        threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                    if not len(self.threads):
+                        # Если вообще ни одной, то создаем первую нить
+                        self.threads.append({'start': row[1], 'end': row[1], 'maxPath': int(row[0]),
+                                        'pathsDates': {int(row[0]): {row[1]: int(row[0])}}})
                     else:
                         threadUpdated = False
-                        for j, thread in enumerate(threads):
-                            if row[1].date() != thread['end'].date():
-                                # Дата не совпадает?
-                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=11)) < row[1]:
-                                    # Меньше 11 дней? Добавляем в рамках этой нити
-                                    threads[j]['pathsDates'][int(row[0])] = row[1]
-                                    threads[j]['end'] = row[1]
+                        for j, thread in enumerate(self.threads):
+                            if row[1].date() != thread['end'].date() or int(row[0]) != thread['maxPath']:
+                                # Дата и последняя папка не совпадает?
+                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=6)) > row[1] and \
+                                        int(row[0]) >= thread['maxPath']:
+                                    # Меньше 15 дней и директория та же или увеличилась? Добавляем в рамках этой нити
+                                    self.threads[j]['end'] = row[1]
+                                    self.threads[j]['maxPath'] = int(row[0])
+                                    if self.threads[j]['pathsDates'].get(int(row[0]), None):
+                                        self.threads[j]['pathsDates'][int(row[0])][row[1]] = int(row[0])
+                                    else:
+                                        self.threads[j]['pathsDates'][int(row[0])] = {row[1]: int(row[0])}
+                                    threadUpdated = True
                             else:
                                 threadUpdated = True
+                                break
                         if not threadUpdated:
                             # Создаем новую нить
-                            threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                            self.threads.append({'start': row[1], 'end': row[1], 'maxPath': int(row[0]),
+                                            'pathsDates': {int(row[0]): {row[1]: int(row[0])}}})
                 else:
                     # Следующая папка
-                    if not len(threads):
-                        threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                    if not len(self.threads):
+                        # Если вообще ни одной, то создаем первую нить
+                        self.threads.append({'start': row[1], 'end': row[1], 'maxPath': int(row[0]),
+                                        'pathsDates': {int(row[0]): {row[1]: int(row[0])}}})
                     else:
                         threadUpdated = False
-                        for j, thread in enumerate(threads):
+                        for j, thread in enumerate(self.threads):
                             if row[1].date() != thread['end'].date():
-                                # Дата не совпадает?
-                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=11)) < row[1]:
-                                    # Меньше 11 дней? Добавляем в рамках этой нити
-                                    threads[j]['pathsDates'][int(row[0])] = row[1]
-                                    threads[j]['end'] = row[1]
+                                # Дата и последняя папка не совпадает?
+                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=6)) > row[1] and \
+                                        int(row[0]) >= thread['maxPath']:
+                                    # Меньше 15 дней и директория та же или увеличилась? Добавляем в рамках этой нити
+                                    self.threads[j]['end'] = row[1]
+                                    self.threads[j]['maxPath'] = int(row[0])
+                                    if self.threads[j]['pathsDates'].get(int(row[0]), None):
+                                        self.threads[j]['pathsDates'][int(row[0])][row[1]] = int(row[0])
+                                    else:
+                                        self.threads[j]['pathsDates'][int(row[0])] = {row[1]: int(row[0])}
+                                    threadUpdated = True
                             else:
                                 threadUpdated = True
+                                break
                         if not threadUpdated:
                             # Создаем новую нить
-                            threads.append({'start': row[1], 'end': row[1], 'pathsDates': {int(row[0]): row[1]}})
+                            # Создаем новую нить
+                            self.threads.append({'start': row[1], 'end': row[1], 'maxPath': int(row[0]),
+                                            'pathsDates': {int(row[0]): {row[1]: int(row[0])}}})
 
         keys = []
         for i in range(0, 10):
@@ -516,7 +561,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         for j in range(0, 546):
             for k in range(0, 10):
                 if self.report_rez.get(j * 10 + k, None):
-                    self.twRez.setItem(j, k, QTableWidgetItem(self.report_rez[j * 10 + k]))
+                    self.twRez.setItem(j, k, QTableWidgetItem(self.report_rez[j * 11 + k]))
                 else:
                     self.twRez.setItem(j, k, QTableWidgetItem('нетинф'))
         # Устанавливаем заголовки таблицы
