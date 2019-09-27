@@ -13,7 +13,7 @@ from mysql.connector import MySQLConnection
 
 from alone_win import Ui_Form
 
-from lib import read_config, l, s, fine_phone, format_phone
+from lib import read_config, l, s, fine_phone, format_phone, fine_snils
 
 class MainWindowSlots(Ui_Form):   # Определяем функции, которые будем вызывать в слотах
 
@@ -40,6 +40,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         self.contracts = {None:None}
         self.clbReport2xlsx.setEnabled(False)
         self.threads = []
+        self.progressBar.hide()
         return
 
     def click_clbLoadXlsx(self):
@@ -47,7 +48,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         ws_unknowns = wb_paths.create_sheet('Аудиозаписи из неопределившейся части файлопомойки')
         ws_unknowns.append(['СНИЛС', 'Дата звонка', 'Ф.И.О.', 'день рождения', 'Прописка'])
         ws_paths = wb_paths.create_sheet('Прослушивание по папкам')
-        ws_paths.append(['Папка', 'Ф.И.О.', 'день рождения', 'Прописка'])
+        ws_paths.append(['№ п/п', 'Папка', 'Ф.И.О.', 'День рождения', 'Прописка'])
         wb = openpyxl.load_workbook(filename='нужноАудио.xlsx', read_only=True)
         ws = wb[wb.sheetnames[0]]
         snilses = []
@@ -58,7 +59,11 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                         snilses.append(l(cell.value))
         dbconn = MySQLConnection(**self.dbconfig_crm)
         cursor = dbconn.cursor()
-        for snils in snilses:
+        self.progressBar.setMaximum(len(snilses) - 1)
+        self.progressBar.show()
+        pathDataDate = {}
+        for i, snils in enumerate(snilses):
+            self.progressBar.setValue(i)
             sql = 'SELECT cl.client_id, ca.client_phone, ca.inserted_date, ca.exchangeable, ' \
                   'concat_ws(" ", cl.p_surname, cl.p_name, cl.p_lastname), cl.b_date, cl.p_service_address ' \
                   'FROM saturn_crm.callcenter AS ca ' \
@@ -81,7 +86,6 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                         checked_row = row
                 if has_checked:
                     data = checked_row[2]
-                pathDataDate = {}
                 finded = False
                 for thread in self.threads:
                     if data > thread['start'] and data < thread['end']:
@@ -98,20 +102,21 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                                     min_path = path
                         for path in range(min_path, max_path + 1):
                             if pathDataDate.get(path, None):
-                                if pathDataDate[path].get(snils, None):
-                                    pathDataDate[path][snils] = [path, fio, birthday, address]
-                                else:
-                                    pathDataDate[path] = {snils: [path, fio, birthday, address]}
+                                pathDataDate[path][snils] = [path, fio, birthday, address]
                             else:
                                 pathDataDate[path] = {snils: [path, fio, birthday, address]}
                 if not finded:
-                    ws_unknowns.append([snils, data, row[4], row[5], row[6]])
+                    ws_unknowns.append([fine_snils(snils), data, row[4], row[5], row[6]])
             else:
                 self.lbDateTime.setText('Нет такого СНИЛС в БД')
+        self.progressBar.hide()
         pathDataDate_sorted = OrderedDict(sorted(pathDataDate.items(), key=lambda t: t[0]))
+        i = 1
         for path in pathDataDate_sorted:
+            ws_paths.append([])
             for snils in pathDataDate[path]:
-                ws_paths.append(pathDataDate[path][snils])
+                ws_paths.append([i] + pathDataDate_sorted[path][snils])
+            i += 1
         wb_paths.save('нужноАудио-Отчет.xlsx')
         return
 
