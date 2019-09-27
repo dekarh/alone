@@ -48,7 +48,6 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         ws_unknowns.append(['СНИЛС', 'Дата звонка', 'Ф.И.О.', 'день рождения', 'Прописка'])
         ws_paths = wb_paths.create_sheet('Прослушивание по папкам')
         ws_paths.append(['Папка', 'Ф.И.О.', 'день рождения', 'Прописка'])
-
         wb = openpyxl.load_workbook(filename='нужноАудио.xlsx', read_only=True)
         ws = wb[wb.sheetnames[0]]
         snilses = []
@@ -57,52 +56,63 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                 for j, cell in enumerate(row):
                     if j == 1:
                         snilses.append(l(cell.value))
-
         dbconn = MySQLConnection(**self.dbconfig_crm)
         cursor = dbconn.cursor()
-        sql = 'SELECT cl.client_id, ca.client_phone, ca.inserted_date, ca.exchangeable ' \
-              'FROM saturn_crm.callcenter AS ca ' \
-              'LEFT JOIN saturn_crm.contracts AS co ON ca.contract_id = co.id ' \
-              'LEFT JOIN saturn_crm.clients AS cl ON co.client_id = cl.client_id ' \
-              'WHERE cl.number = %s and cl.subdomain_id = 6'
-        cursor.execute(sql, (l(self.leSNILS.text()),))
-        rows = cursor.fetchall()
-        if len(rows):
-            data = datetime(2001, 1, 1, 0, 0)
-            has_checked = False
-            for row in rows:
-                if row[2] > data:
-                    data = row[2]
-                if row[3]:
-                    has_checked = True
-                    checked_row = row
-            if has_checked:
-                data = checked_row[2]
-            textDateTime = data.strftime('%d.%m.%Y') + ' прослушать папки'
-            finded = False
-            for thread in self.threads:
-                if data > thread['start'] and data < thread['end']:
-                    finded = True
-                    max_date_delta = timedelta(days=10000)
-                    min_date_delta = timedelta(days=10000)
-                    for path in thread['pathsDates']:
-                        for call_date in thread['pathsDates'][path]:
-                            if call_date > data and (call_date - data) < max_date_delta:
-                                max_date_delta = call_date - data
-                                max_path = path
-                            if call_date < data and (data - call_date) < min_date_delta:
-                                min_date_delta = data - call_date
-                                min_path = path
-                    if textDateTime[-16:] == 'прослушать папки':
-                        textDateTime += ' c ' + str(min_path) + ' по ' + str(max_path)
-                    else:
-                        textDateTime += ', c ' + str(min_path) + ' по ' + str(max_path)
-            if not finded:
-                textDateTime += ' недостаточно информации для определения'
-            self.lbDateTime.setText(textDateTime)
-        else:
-            self.lbDateTime.setText('Нет такого СНИЛС в БД')
-        wb_log.save('нужноАудио-Отчет.xlsx')
+        for snils in snilses:
+            sql = 'SELECT cl.client_id, ca.client_phone, ca.inserted_date, ca.exchangeable, ' \
+                  'concat_ws(" ", cl.p_surname, cl.p_name, cl.p_lastname), cl.b_date, cl.p_service_address ' \
+                  'FROM saturn_crm.callcenter AS ca ' \
+                  'LEFT JOIN saturn_crm.contracts AS co ON ca.contract_id = co.id ' \
+                  'LEFT JOIN saturn_crm.clients AS cl ON co.client_id = cl.client_id ' \
+                  'WHERE cl.number = %s and cl.subdomain_id = 6'
+            cursor.execute(sql, (l(snils),))
+            rows = cursor.fetchall()
+            if len(rows):
+                fio = rows[0][4]
+                birthday = rows[0][5]
+                address = rows[0][6]
+                data = datetime(2001, 1, 1, 0, 0)
+                has_checked = False
+                for row in rows:
+                    if row[2] > data:
+                        data = row[2]
+                    if row[3]:
+                        has_checked = True
+                        checked_row = row
+                if has_checked:
+                    data = checked_row[2]
+                pathDataDate = {}
+                finded = False
+                for thread in self.threads:
+                    if data > thread['start'] and data < thread['end']:
+                        finded = True
+                        max_date_delta = timedelta(days=10000)
+                        min_date_delta = timedelta(days=10000)
+                        for path in thread['pathsDates']:
+                            for call_date in thread['pathsDates'][path]:
+                                if call_date > data and (call_date - data) < max_date_delta:
+                                    max_date_delta = call_date - data
+                                    max_path = path
+                                if call_date < data and (data - call_date) < min_date_delta:
+                                    min_date_delta = data - call_date
+                                    min_path = path
+                        for path in range(min_path, max_path + 1):
+                            if pathDataDate.get(path, None):
+                                if pathDataDate[path].get(snils, None):
+                                    pathDataDate[path][snils] = [path, fio, birthday, address]
+                                else:
+                                    pathDataDate[path] = {snils: [path, fio, birthday, address]}
+                            else:
+                                pathDataDate[path] = {snils: [path, fio, birthday, address]}
+                if not finded:
+                    ws_unknowns.append([snils, data, row[4], row[5], row[6]])
+            else:
+                self.lbDateTime.setText('Нет такого СНИЛС в БД')
+        pathDataDate_sorted = OrderedDict(sorted(pathDataDate.items(), key=lambda t: t[0]))
+        for path in pathDataDate_sorted:
+            for snils in pathDataDate[path]:
+                ws_paths.append(pathDataDate[path][snils])
+        wb_paths.save('нужноАудио-Отчет.xlsx')
         return
 
     def click_clbSNILS(self):
