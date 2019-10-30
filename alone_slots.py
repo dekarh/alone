@@ -102,9 +102,9 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                                     min_path = path
                         for path in range(min_path, max_path + 1):
                             if pathDataDate.get(path, None):
-                                pathDataDate[path][snils] = [path, snils, fio, birthday, address]
+                                pathDataDate[path][snils] = [path, fine_snils(snils), fio, birthday, address]
                             else:
-                                pathDataDate[path] = {snils: [path, snils, fio, birthday, address]}
+                                pathDataDate[path] = {snils: [path, fine_snils(snils), fio, birthday, address]}
                 if not finded:
                     ws_unknowns.append([fine_snils(snils), data, row[4], row[5], row[6]])
             else:
