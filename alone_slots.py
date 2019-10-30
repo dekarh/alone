@@ -48,7 +48,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         ws_unknowns = wb_paths.create_sheet('Аудиозаписи из неопределившейся части файлопомойки')
         ws_unknowns.append(['СНИЛС', 'Дата звонка', 'Ф.И.О.', 'день рождения', 'Прописка'])
         ws_paths = wb_paths.create_sheet('Прослушивание по папкам')
-        ws_paths.append(['№ п/п', 'Папка', 'Ф.И.О.', 'День рождения', 'Прописка'])
+        ws_paths.append(['№ п/п', 'Папка', 'СНИЛС', 'Ф.И.О.', 'День рождения', 'Прописка'])
         wb = openpyxl.load_workbook(filename='нужноАудио.xlsx', read_only=True)
         ws = wb[wb.sheetnames[0]]
         snilses = []
@@ -102,9 +102,9 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                                     min_path = path
                         for path in range(min_path, max_path + 1):
                             if pathDataDate.get(path, None):
-                                pathDataDate[path][snils] = [path, fio, birthday, address]
+                                pathDataDate[path][snils] = [path, snils, fio, birthday, address]
                             else:
-                                pathDataDate[path] = {snils: [path, fio, birthday, address]}
+                                pathDataDate[path] = {snils: [path, snils, fio, birthday, address]}
                 if not finded:
                     ws_unknowns.append([fine_snils(snils), data, row[4], row[5], row[6]])
             else:
