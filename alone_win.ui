@@ -104,7 +104,7 @@
        </widget>
       </item>
       <item>
-       <spacer name="horizontalSpacer">
+       <spacer name="horizontalSpacer_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -115,6 +115,26 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item>
+       <widget class="QCommandLinkButton" name="clbNotFindedXLSX">
+        <property name="maximumSize">
+         <size>
+          <width>33</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>saveXLSX.png</normaloff>saveXLSX.png</iconset>
+        </property>
+        <property name="description">
+         <string/>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QCommandLinkButton" name="clbRefreshReport">
@@ -137,6 +157,19 @@
        </widget>
       </item>
       <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QCommandLinkButton" name="clbReport2xlsx">
         <property name="maximumSize">
          <size>
@@ -149,7 +182,7 @@
         </property>
         <property name="icon">
          <iconset>
-          <normaloff>saveXLSX.png</normaloff>saveXLSX.png</iconset>
+          <normaloff>saveRED.png</normaloff>saveRED.png</iconset>
         </property>
         <property name="description">
          <string/>
@@ -239,7 +272,7 @@
         </property>
         <property name="icon">
          <iconset>
-          <normaloff>saveXLSX.png</normaloff>saveXLSX.png</iconset>
+          <normaloff>saveBLUE.png</normaloff>saveBLUE.png</iconset>
         </property>
         <property name="description">
          <string/>

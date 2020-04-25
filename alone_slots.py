@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# для поиска по базе адресов нужно стартовать сервисы sphinx и fias
 
 from collections import OrderedDict
 
@@ -43,6 +42,9 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         self.progressBar.hide()
         return
 
+    def click_clbNotFindedXLSX(self):
+        return
+
     def click_clbLoadXlsx(self):
         wb_paths = openpyxl.Workbook(write_only=True)
         ws_unknowns = wb_paths.create_sheet('Аудиозаписи из неопределившейся части файлопомойки')
@@ -57,6 +59,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                 for j, cell in enumerate(row):
                     if j == 1:
                         snilses.append(l(cell.value))
+                        break
         dbconn = MySQLConnection(**self.dbconfig_crm)
         cursor = dbconn.cursor()
         self.progressBar.setMaximum(len(snilses) - 1)
@@ -69,7 +72,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                   'FROM saturn_crm.callcenter AS ca ' \
                   'LEFT JOIN saturn_crm.contracts AS co ON ca.contract_id = co.id ' \
                   'LEFT JOIN saturn_crm.clients AS cl ON co.client_id = cl.client_id ' \
-                  'WHERE cl.number = %s and cl.subdomain_id = 6'
+                  'WHERE cl.number = %s and cl.subdomain_id = 13'
             cursor.execute(sql, (l(snils),))
             rows = cursor.fetchall()
             if len(rows):
@@ -111,10 +114,49 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                 self.lbDateTime.setText('Нет такого СНИЛС в БД')
         self.progressBar.hide()
         pathDataDate_sorted = OrderedDict(sorted(pathDataDate.items(), key=lambda t: t[0]))
+
+        # Для каждого звонка по СНИЛС из списка ненайденных сформировать словарь
+        #                                                    not_finded[СНИЛС]={callcenter_id: [дата, длительность]}
+        not_finded = {}
+        cursor = dbconn.cursor()
+        cursor.execute('SELECT cl.number, ca.id, ca.inserted_date, ca.updated_date FROM saturn_crm.callcenter AS ca '
+              'LEFT JOIN saturn_crm.contracts AS co ON ca.contract_id = co.id '
+              'LEFT JOIN saturn_crm.clients AS cl ON co.client_id = cl.client_id '
+              'WHERE cl.subdomain_id = 13 and cl.number IN (' + ','.join([str(q) for q in snilses]) + ')')
+        rows = cursor.fetchall()
+        for row in rows:
+            if row[3] and row[2]:
+                if not_finded.get(row[0], None):
+                    if not_finded[row[0]].get(row[1], None):
+                        not_finded[row[0]][row[1]] = row[3] - row[2]
+                    else:
+                        not_finded[row[0]] = {row[1]: row[3] - row[2]}
+                else:
+                    not_finded[row[0]] = {row[1]: row[3] - row[2]}
+
+        # Для каждого 2,5 млн файлов из файлопомойки определить папка-имя-длительность
+        # В соответствии с папкой файлов из файлопомойки проверить все callcenter_id из not_finded[СНИЛС]
+        for snils in pathDataDate[path]:
+            for callcenter_id in not_finded[snils]:
+
+        # В каких он тредах (self.threads) найти совпадающие по длительности аудиофайлы в файлопомойке
+        # Сохранить в xlsx
+
+
+        # Было
         i = 1
         for path in pathDataDate_sorted:
             ws_paths.append([])
             for snils in pathDataDate[path]:
+                ws_paths.append([i] + pathDataDate_sorted[path][snils])
+            i += 1
+        wb_paths.save('нужноАудио-Отчет.xlsx')
+
+        # Надо сделать
+        i = 1
+        for snils in snilses:
+            ws_paths.append([])
+            for path in pathDataDate_sorted:
                 ws_paths.append([i] + pathDataDate_sorted[path][snils])
             i += 1
         wb_paths.save('нужноАудио-Отчет.xlsx')
@@ -581,7 +623,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                         for j, thread in enumerate(self.threads):
                             if row[1].date() != thread['end'].date() or int(row[0]) != thread['maxPath']:
                                 # Дата и последняя папка не совпадает?
-                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=6)) > row[1] and \
+                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=30)) > row[1] and \
                                         int(row[0]) >= thread['maxPath']:
                                     # Меньше 15 дней и директория та же или увеличилась? Добавляем в рамках этой нити
                                     self.threads[j]['end'] = row[1]
@@ -609,7 +651,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                         for j, thread in enumerate(self.threads):
                             if row[1].date() != thread['end'].date():
                                 # Дата и последняя папка не совпадает?
-                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=6)) > row[1] and \
+                                if row[1] > thread['end'] and (thread['end'] + timedelta(days=30)) > row[1] and \
                                         int(row[0]) >= thread['maxPath']:
                                     # Меньше 15 дней и директория та же или увеличилась? Добавляем в рамках этой нити
                                     self.threads[j]['end'] = row[1]
@@ -639,7 +681,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         for j in range(0, 546):
             for k in range(0, 10):
                 if self.report_rez.get(j * 10 + k, None):
-                    self.twRez.setItem(j, k, QTableWidgetItem(self.report_rez[j * 11 + k]))
+                    self.twRez.setItem(j, k, QTableWidgetItem(self.report_rez[j * 10 + k]))
                 else:
                     self.twRez.setItem(j, k, QTableWidgetItem('нетинф'))
         # Устанавливаем заголовки таблицы
