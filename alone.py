@@ -24,7 +24,7 @@ class MainWindow(MainWindowSlots):
         self.clbReport2xlsx.clicked.connect(self.click_clbReport2xlsx)
         self.clbNotFindedXLSX.clicked.connect(self.click_clbNotFindedXLSX)
         self.clbSave.clicked.connect(self.click_clbSave)
-        self.clbLoadXlsx.clicked.connect(self.click_clbLoadXlsx)
+        self.clbLoadBLUE.clicked.connect(self.click_clbLoadBLUE)
         self.clbSNILS.clicked.connect(self.click_clbSNILS)
         self.pbSortF.clicked.connect(self.click_pbSortF)
         self.pbSortIO.clicked.connect(self.click_pbSortIO)
