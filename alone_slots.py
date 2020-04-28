@@ -225,11 +225,11 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                             else:
                                 pathDataDate[path] = {snils: [path, fine_snils(snils), fio, birthday, address]}
                 if not finded:
-                    ws_unknowns.append([fine_snils(snils), data, row[4], row[5], row[6]])
+                    print('Не найдено', fine_snils(snils), data, fio, birthday, address)
             else:
                 self.lbDateTime.setText('Нет такого СНИЛС в БД')
         # Сортируем
-        pathDataDate_sorted = OrderedDict(sorted(pathDataDate.items(), key=lambda t: t[0]))
+        #pathDataDate_sorted = OrderedDict(sorted(pathDataDate.items(), key=lambda t: t[0]))
 
         # По всем звонкам по СНИЛС из списка ненайденных формируем словарь
         #                                                    not_finded[СНИЛС]={callcenter_id: длительность}
@@ -238,7 +238,8 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
         cursor.execute('SELECT cl.number, ca.id, ca.inserted_date, ca.updated_date FROM saturn_crm.callcenter AS ca '
               'LEFT JOIN saturn_crm.contracts AS co ON ca.contract_id = co.id '
               'LEFT JOIN saturn_crm.clients AS cl ON co.client_id = cl.client_id '
-              'WHERE cl.subdomain_id = 13 and cl.number IN (' + ','.join([str(q) for q in self.not_finded_snilses]) + ')')
+              'WHERE cl.subdomain_id = 13 and cl.number IN (' + ','.join([str(q) for q in self.not_finded_snilses]) +
+              ')')
         rows = cursor.fetchall()
         for row in rows:
             if row[3] and row[2]:
@@ -268,7 +269,7 @@ class MainWindowSlots(Ui_Form):   # Определяем функции, кот�
                                         timedelta(seconds=0.1):
                                     finded4not_finded.append((path_name, file_name, callcenter_id, snils))
                                     pass
-                if not (len(finded4not_finded) % 100) and len(finded4not_finded):
+                if not (len(finded4not_finded) % 1000) and len(finded4not_finded):
                     cursor = dbconn.cursor()
                     cursor.executemany('INSERT INTO lekarh.alone_finded (path, file, callcenter_id, snils) '
                                        'VALUES (%s, %s, %s, %s)', finded4not_finded)
